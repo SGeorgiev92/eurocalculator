@@ -96,8 +96,15 @@ button {
     <label id="priceLabel">Цена (EUR)</label>
     <input id="price" inputmode="decimal" placeholder="напр. 7.50">
 
-    <label id="paidLabel">Платено (сума + валута)</label>
-    <input id="paid" placeholder="20 €, 40 лв, 15 eur, 20 e, 40 b">
+    <label id="paidLabel">Платено</label>
+    <div style="display:flex;gap:10px;">
+        <div style="flex:1;">
+            <input id="paidEUR" inputmode="decimal" placeholder="EUR: 20">
+        </div>
+        <div style="flex:1;">
+            <input id="paidBGN" inputmode="decimal" placeholder="BGN: 40">
+        </div>
+    </div>
 
     <button id="calcBtn">Изчисли</button>
     <button class="toggle" id="darkBtn">🌙 Тъмен режим</button>
@@ -110,7 +117,8 @@ button {
 <script>
 const rate = 1.95583;
 const priceInput = document.getElementById("price");
-const paidInput = document.getElementById("paid");
+const paidEURInput = document.getElementById("paidEUR");
+const paidBGNInput = document.getElementById("paidBGN");
 const output = document.getElementById("output");
 const receipt = document.getElementById("receipt");
 const calcBtn = document.getElementById("calcBtn");
@@ -123,9 +131,9 @@ const langText = {
     bg: {
         title:"Калкулатор за ресто",
         priceLabel:"Цена (EUR)", pricePlaceholder:"напр. 7.50",
-        paidLabel:"Платено (сума + валута)", paidPlaceholder:"20 €, 40 лв, 15 eur, 20 e, 40 b",
+        paidLabel:"Платено", eurPlaceholder:"EUR: 20", bgnPlaceholder:"BGN: 40",
         calcBtn:"Изчисли", darkBtnDark:"🌙 Тъмен режим", darkBtnLight:"☀️ Светъл режим",
-        invalidPrice:"Невалидна цена.", invalidPaid:"Невалиден формат на платената сума.",
+        invalidPrice:"Невалидна цена.", invalidPaid:"Въведете EUR или BGN.",
         insufficient:"Недостатъчно платена сума.", changeTitle:"Ресто:",
         receiptTitle:"КАСОВО РЕСТО", receiptSeparator:"----------------", euro:"€", bgn:"лв",
         langBtn:"🇧🇬 BG"
@@ -133,9 +141,9 @@ const langText = {
     en: {
         title:"Change Calculator",
         priceLabel:"Price (EUR)", pricePlaceholder:"e.g. 7.50",
-        paidLabel:"Paid amount + currency", paidPlaceholder:"20 €, 40 BGN, 15 eur, 20 e, 40 b",
+        paidLabel:"Paid", eurPlaceholder:"EUR: 20", bgnPlaceholder:"BGN: 40",
         calcBtn:"Calculate", darkBtnDark:"🌙 Dark mode", darkBtnLight:"☀️ Light mode",
-        invalidPrice:"Invalid price.", invalidPaid:"Invalid paid amount format.", insufficient:"Insufficient payment.",
+        invalidPrice:"Invalid price.", invalidPaid:"Enter EUR or BGN.", insufficient:"Insufficient payment.",
         changeTitle:"Change:", receiptTitle:"RECEIPT", receiptSeparator:"----------------", euro:"€", bgn:"BGN",
         langBtn:"🇬🇧 EN"
     }
@@ -173,7 +181,8 @@ function setLanguage(lang){
     document.getElementById("priceLabel").textContent = t.priceLabel;
     priceInput.placeholder = t.pricePlaceholder;
     document.getElementById("paidLabel").textContent = t.paidLabel;
-    paidInput.placeholder = t.paidPlaceholder;
+    paidEURInput.placeholder = t.eurPlaceholder;
+    paidBGNInput.placeholder = t.bgnPlaceholder;
     calcBtn.textContent = t.calcBtn;
     updateButtons();
 }
@@ -182,22 +191,34 @@ function setLanguage(lang){
 function calculate(){
     const t = langText[currentLang];
     const price = parseFloat(priceInput.value.replace(',', '.'));
-    const raw = paidInput.value.trim().toLowerCase();
     if(isNaN(price)){ output.textContent=t.invalidPrice; receipt.innerHTML=""; return; }
 
-    // Detect currency
-    const match = raw.match(/^([\d.,]+)\s*(€|eur|euro|e|лв|lv|bgn|b)$/);
-    if(!match){ output.textContent=t.invalidPaid; receipt.innerHTML=""; return; }
+    const eurVal = paidEURInput.value.trim();
+    const bgnVal = paidBGNInput.value.trim();
+    
+    if(!eurVal && !bgnVal){ output.textContent=t.invalidPaid; receipt.innerHTML=""; return; }
 
-    const paidAmount=parseFloat(match[1].replace(',','.'));
-    const cur=match[2];
-    let paidEUR = ["€","eur","euro","e"].includes(cur) ? paidAmount : paidAmount/rate;
-    const changeEUR = paidEUR-price;
-    if(changeEUR<0){ output.textContent=t.insufficient; receipt.innerHTML=""; return; }
-    const changeBGN=changeEUR*rate;
+    let paidEUR = 0;
+    let paidDisplay = "";
+    
+    if(eurVal){
+        const eurAmount = parseFloat(eurVal.replace(',','.'));
+        if(isNaN(eurAmount)){ output.textContent=t.invalidPaid; receipt.innerHTML=""; return; }
+        paidEUR = eurAmount;
+        paidDisplay = `${eurAmount.toFixed(2)} €`;
+    } else {
+        const bgnAmount = parseFloat(bgnVal.replace(',','.'));
+        if(isNaN(bgnAmount)){ output.textContent=t.invalidPaid; receipt.innerHTML=""; return; }
+        paidEUR = bgnAmount / rate;
+        paidDisplay = `${bgnAmount.toFixed(2)} лв`;
+    }
+
+    const changeEUR = paidEUR - price;
+    if(changeEUR < 0){ output.textContent=t.insufficient; receipt.innerHTML=""; return; }
+    const changeBGN = changeEUR * rate;
 
     output.innerHTML=`${t.changeTitle}<br>${t.euro}: ${changeEUR.toFixed(2)} €<br>${t.bgn}: ${changeBGN.toFixed(2)} лв`;
-    receipt.innerHTML=`${t.receiptTitle}\nPrice: ${price.toFixed(2)} €\nPaid: ${paidAmount.toFixed(2)} ${cur}\n${t.receiptSeparator}\nChange EUR: ${changeEUR.toFixed(2)} €\nChange BGN: ${changeBGN.toFixed(2)} лв`;
+    receipt.innerHTML=`${t.receiptTitle}\nPrice: ${price.toFixed(2)} €\nPaid: ${paidDisplay}\n${t.receiptSeparator}\nChange EUR: ${changeEUR.toFixed(2)} €\nChange BGN: ${changeBGN.toFixed(2)} лв`;
 }
 
 // Keyboard support
