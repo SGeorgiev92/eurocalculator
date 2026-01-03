@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Change Calculator / Калкулатор за ресто</title>
+<style>
+:root {
+    --bg: #f4f4f4;
+    --box: #fff;
+    --text: #000;
+    --accent: #2b7cff;
+}
+
+body.dark {
+    --bg: #121212;
+    --box: #1e1e1e;
+    --text: #fff;
+    --accent: #4c8dff;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    font-family: system-ui, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 16px;
+}
+
+.container {
+    max-width: 420px;
+    width: 100%;
+    margin: auto;
+    background: var(--box);
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+}
+
+h2 { text-align: center; margin-top:0; font-size:1.6em; }
+
+label { display:block; margin-top:12px; font-size:1em; }
+
+input {
+    width: 100%;
+    padding: 12px;
+    margin-top:6px;
+    font-size:1em;
+    border-radius:8px;
+    border:1px solid #999;
+}
+
+button {
+    width: 100%;
+    margin-top:12px;
+    padding:12px;
+    font-size:1em;
+    border:none;
+    border-radius:8px;
+    background: var(--accent);
+    color:#fff;
+    cursor:pointer;
+}
+
+.toggle, .lang-toggle {
+    display:inline-block;
+    padding:8px 12px;
+    margin-top:10px;
+    margin-right:5px;
+    border-radius:8px;
+    border:1px solid #999;
+    background: var(--box);
+    color: var(--text);
+    font-size:16px;
+    cursor:pointer;
+}
+
+.toggle:hover, .lang-toggle:hover { opacity:0.85; }
+
+.result { margin-top:20px; font-weight:bold; font-size:1.1em; }
+.receipt { margin-top:20px; padding-top:10px; border-top:1px dashed #999; white-space:pre-line; font-size:1em; }
+
+@media print {
+    body { background:white; padding:0; }
+    .container { box-shadow:none; border-radius:0; }
+    button, .toggle, .lang-toggle { display:none; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+    <h2 id="title">Калкулатор за ресто</h2>
+
+    <label id="priceLabel">Цена (EUR)</label>
+    <input id="price" inputmode="decimal" placeholder="напр. 7.50">
+
+    <label id="paidLabel">Платено (сума + валута)</label>
+    <input id="paid" placeholder="20 €, 40 лв, 15 eur, 20 e, 40 b">
+
+    <button id="calcBtn">Изчисли</button>
+    <button class="toggle" id="darkBtn">🌙 Тъмен режим</button>
+    <button class="lang-toggle" id="langBtn">🇧🇬 BG</button>
+
+    <div class="result" id="output"></div>
+    <div class="receipt" id="receipt"></div>
+</div>
+
+<script>
+const rate = 1.95583;
+const priceInput = document.getElementById("price");
+const paidInput = document.getElementById("paid");
+const output = document.getElementById("output");
+const receipt = document.getElementById("receipt");
+const calcBtn = document.getElementById("calcBtn");
+const darkBtn = document.getElementById("darkBtn");
+const langBtn = document.getElementById("langBtn");
+
+let currentLang = "bg";
+
+const langText = {
+    bg: {
+        title:"Калкулатор за ресто",
+        priceLabel:"Цена (EUR)", pricePlaceholder:"напр. 7.50",
+        paidLabel:"Платено (сума + валута)", paidPlaceholder:"20 €, 40 лв, 15 eur, 20 e, 40 b",
+        calcBtn:"Изчисли", darkBtnDark:"🌙 Тъмен режим", darkBtnLight:"☀️ Светъл режим",
+        invalidPrice:"Невалидна цена.", invalidPaid:"Невалиден формат на платената сума.",
+        insufficient:"Недостатъчно платена сума.", changeTitle:"Ресто:",
+        receiptTitle:"КАСОВО РЕСТО", receiptSeparator:"----------------", euro:"€", bgn:"лв",
+        langBtn:"🇧🇬 BG"
+    },
+    en: {
+        title:"Change Calculator",
+        priceLabel:"Price (EUR)", pricePlaceholder:"e.g. 7.50",
+        paidLabel:"Paid amount + currency", paidPlaceholder:"20 €, 40 BGN, 15 eur, 20 e, 40 b",
+        calcBtn:"Calculate", darkBtnDark:"🌙 Dark mode", darkBtnLight:"☀️ Light mode",
+        invalidPrice:"Invalid price.", invalidPaid:"Invalid paid amount format.", insufficient:"Insufficient payment.",
+        changeTitle:"Change:", receiptTitle:"RECEIPT", receiptSeparator:"----------------", euro:"€", bgn:"BGN",
+        langBtn:"🇬🇧 EN"
+    }
+};
+
+// Dark mode init
+const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+const savedTheme = localStorage.getItem("theme");
+if(savedTheme === "dark" || (!savedTheme && prefersDark)) document.body.classList.add("dark");
+updateButtons();
+
+function updateButtons() {
+    const t = langText[currentLang];
+    darkBtn.textContent = document.body.classList.contains("dark") ? t.darkBtnLight : t.darkBtnDark;
+    langBtn.textContent = t.langBtn;
+}
+
+// Language toggle
+langBtn.addEventListener("click", ()=>{
+    currentLang = currentLang==="bg"?"en":"bg";
+    setLanguage(currentLang);
+});
+
+// Dark mode toggle
+darkBtn.addEventListener("click", ()=>{
+    document.body.classList.toggle("dark");
+    localStorage.setItem("theme", document.body.classList.contains("dark")?"dark":"light");
+    updateButtons();
+});
+
+// Set language
+function setLanguage(lang){
+    const t = langText[lang];
+    document.getElementById("title").textContent = t.title;
+    document.getElementById("priceLabel").textContent = t.priceLabel;
+    priceInput.placeholder = t.pricePlaceholder;
+    document.getElementById("paidLabel").textContent = t.paidLabel;
+    paidInput.placeholder = t.paidPlaceholder;
+    calcBtn.textContent = t.calcBtn;
+    updateButtons();
+}
+
+// Calculator
+function calculate(){
+    const t = langText[currentLang];
+    const price = parseFloat(priceInput.value.replace(',', '.'));
+    const raw = paidInput.value.trim().toLowerCase();
+    if(isNaN(price)){ output.textContent=t.invalidPrice; receipt.innerHTML=""; return; }
+
+    // Detect currency
+    const match = raw.match(/^([\d.,]+)\s*(€|eur|euro|e|лв|lv|bgn|b)$/);
+    if(!match){ output.textContent=t.invalidPaid; receipt.innerHTML=""; return; }
+
+    const paidAmount=parseFloat(match[1].replace(',','.'));
+    const cur=match[2];
+    let paidEUR = ["€","eur","euro","e"].includes(cur) ? paidAmount : paidAmount/rate;
+    const changeEUR = paidEUR-price;
+    if(changeEUR<0){ output.textContent=t.insufficient; receipt.innerHTML=""; return; }
+    const changeBGN=changeEUR*rate;
+
+    output.innerHTML=`${t.changeTitle}<br>${t.euro}: ${changeEUR.toFixed(2)} €<br>${t.bgn}: ${changeBGN.toFixed(2)} лв`;
+    receipt.innerHTML=`${t.receiptTitle}\nPrice: ${price.toFixed(2)} €\nPaid: ${paidAmount.toFixed(2)} ${cur}\n${t.receiptSeparator}\nChange EUR: ${changeEUR.toFixed(2)} €\nChange BGN: ${changeBGN.toFixed(2)} лв`;
+}
+
+// Keyboard support
+document.addEventListener("keydown", e=>{ if(e.key==="Enter") calculate(); });
+calcBtn.onclick=calculate;
+
+// Init
+setLanguage(currentLang);
+</script>
+</body>
+</html>
